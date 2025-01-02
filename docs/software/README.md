@@ -353,7 +353,7 @@ COMMIT;
 
 ## RESTful сервіс для управління даними
 
-###app.js
+app.js
 
 Запуск сервера, підключення маршрутів, обробка JSON-запитів.
 ```JavaScript
@@ -375,7 +375,8 @@ app.listen(PORT, () => {
 });
 ```
 
-###connection.js
+connection.js
+
 Підключення до бази даних.
 ```JavaScript
 const mysql = require("mysql2");
@@ -393,7 +394,8 @@ const pool = mysql.createPool({
 module.exports = pool.promise();
 ```
 
-###userController.js
+userController.js
+
 Логіка операцій над користувачами.
 ```JavaScript
 const db = require("../db/connection");
@@ -489,9 +491,10 @@ exports.deleteUser = async (req, res) => {
 };
 ```
 
-###user.js
+user.js
+
 Маршрути для операцій із користувачами та зв’язування з методами контролера.
-```
+```JavaScript
 const express = require("express");
 const {
   getAllUsers,
@@ -512,9 +515,10 @@ router.delete("/:id", deleteUser);
 module.exports = router;
 ```
 
-###roleController.js
+roleController.js
+
 Логіку для операцій над ролями.
-```
+```JavaScript
 const db = require("../db/connection");
 
 exports.getAllRoles = async (req, res) => {
@@ -578,9 +582,10 @@ exports.deleteRole = async (req, res) => {
 };
 ```
 
-###role.js
+role.js
+
 Маршрути для операцій із ролями та зв’язування з методами контролера.
-```
+```JavaScript
 const express = require("express");
 const {
   getAllRoles,

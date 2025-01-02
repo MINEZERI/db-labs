@@ -352,3 +352,250 @@ COMMIT;
 ```
 
 ## RESTful сервіс для управління даними
+
+###app.js
+Запуск сервера, підключення маршрутів, обробка JSON-запитів.
+```JavaScript
+require("dotenv").config();
+const express = require("express");
+const bodyParser = require("body-parser");
+const userRoutes = require("./routes/user");
+const roleRoutes = require("./routes/role");
+
+const app = express();
+app.use(bodyParser.json());
+
+app.use("/api/users", userRoutes);
+app.use("/api/roles", roleRoutes);
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
+```
+
+###connection.js
+Підключення до бази даних.
+```JavaScript
+const mysql = require("mysql2");
+
+const pool = mysql.createPool({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+});
+
+module.exports = pool.promise();
+```
+
+###userController.js
+Логіка операцій над користувачами.
+```JavaScript
+const db = require("../db/connection");
+
+exports.getAllUsers = async (req, res) => {
+  console.log("my code is working here");
+  try {
+    const [users] = await db.query("SELECT * FROM User");
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getUser = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [users] = await db.query("SELECT * FROM User WHERE id = ?", [id]);
+    if (users.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.json(users[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.createUser = async (req, res) => {
+  const {
+    name,
+    password,
+    email,
+    account_creation_date,
+    last_login_date,
+    role_id,
+  } = req.body;
+  try {
+    const [result] = await db.query(
+      "INSERT INTO User (name, password, email, account_creation_date, last_login_date, role_id) VALUES (?, ?, ?, ?, ?, ?)",
+      [name, password, email, account_creation_date, last_login_date, role_id],
+    );
+    res.status(201).json({
+      id: result.insertId,
+      name,
+      password,
+      email,
+      account_creation_date,
+      last_login_date,
+      role_id,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateUser = async (req, res) => {
+  const { id } = req.params;
+  const {
+    name,
+    password,
+    email,
+    account_creation_date,
+    last_login_date,
+    role_id,
+  } = req.body;
+  try {
+    await db.query(
+      "UPDATE User SET name = ?, password = ?, email = ?, account_creation_date = ?, last_login_date = ?, role_id = ? WHERE id = ?",
+      [
+        name,
+        password,
+        email,
+        account_creation_date,
+        last_login_date,
+        role_id,
+        id,
+      ],
+    );
+    res.json({ message: "User updated successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.deleteUser = async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.query("DELETE FROM User WHERE id = ?", [id]);
+    res.json({ message: "User deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+```
+
+###user.js
+Маршрути для операцій із користувачами та зв’язування з методами контролера.
+```
+const express = require("express");
+const {
+  getAllUsers,
+  getUser,
+  createUser,
+  updateUser,
+  deleteUser,
+} = require("../controllers/userController");
+
+const router = express.Router();
+
+router.get("/", getAllUsers);
+router.get("/:id", getUser);
+router.post("/", createUser);
+router.put("/:id", updateUser);
+router.delete("/:id", deleteUser);
+
+module.exports = router;
+```
+
+###roleController.js
+Логіку для операцій над ролями.
+```
+const db = require("../db/connection");
+
+exports.getAllRoles = async (req, res) => {
+  try {
+    const [roles] = await db.query("SELECT * FROM Role");
+    res.json(roles);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getRole = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [roles] = await db.query("SELECT * FROM Role WHERE id = ?", [id]);
+    if (roles.length === 0) {
+      return res.status(404).json({ error: "Role not found" });
+    }
+    res.json(roles[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.createRole = async (req, res) => {
+  const { name, description } = req.body;
+  try {
+    const [result] = await db.query(
+      "INSERT INTO Role (name, description) VALUES (?, ?)",
+      [name, description],
+    );
+    res.status(201).json({ id: result.insertId, name, description });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateRole = async (req, res) => {
+  const { id } = req.params;
+  const { name, description } = req.body;
+  try {
+    await db.query("UPDATE Role SET name = ?, description = ? WHERE id = ?", [
+      name,
+      description,
+      id,
+    ]);
+    res.json({ message: "Role updated successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.deleteRole = async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.query("DELETE FROM Role WHERE id = ?", [id]);
+    res.json({ message: "Role deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+```
+
+###role.js
+Маршрути для операцій із ролями та зв’язування з методами контролера.
+```
+const express = require("express");
+const {
+  getAllRoles,
+  getRole,
+  createRole,
+  updateRole,
+  deleteRole,
+} = require("../controllers/roleController");
+
+const router = express.Router();
+
+router.get("/", getAllRoles);
+router.get("/:id", getRole);
+router.post("/", createRole);
+router.put("/:id", updateRole);
+router.delete("/:id", deleteRole);
+
+module.exports = router;
+```
